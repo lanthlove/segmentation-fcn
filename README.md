@@ -81,9 +81,10 @@ colormap = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0], [0, 0, 128],
 
 打包使用作业代码中的**convert_fcn_dataset.py**脚本进行。脚本内容已经删掉一部分，需要由学员自行补全缺失部分的代码。
 
-'''
+```
 python3 convert_fcn_dataset.py --data_dir=/path/to/VOCdevkit/VOC2012/ --output_dir=./
-'''
+```
+
 
 本步骤最终生成的两个文件**fcn_train.record**,**fcn_val.record**分别在400MB左右，共800MB左右，如果最后的文件大小过大或过小，生成数据的过程可能有问题，请注意检查。
 
