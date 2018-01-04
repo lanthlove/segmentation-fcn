@@ -44,7 +44,7 @@ is_training_placeholder = tf.placeholder(tf.bool)
 batch_size = FLAGS.batch_size
 
 image_tensor_train, orig_img_tensor_train, annotation_tensor_train = inputs(FLAGS.dataset_train, train=True, batch_size=batch_size, num_epochs=1e4)
-image_tensor_val, orig_img_tensor_val, annotation_tensor_val = inputs(FLAGS.dataset_val, train=False)
+image_tensor_val, orig_img_tensor_val, annotation_tensor_val = inputs(FLAGS.dataset_val, train=False, num_epochs=1e4)
 
 image_tensor, orig_img_tensor, annotation_tensor = tf.cond(is_training_placeholder,
                                                            true_fn=lambda: (image_tensor_train, orig_img_tensor_train, annotation_tensor_train),
