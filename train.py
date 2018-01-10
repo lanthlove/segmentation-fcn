@@ -313,12 +313,12 @@ with sess:
                 val_pred, val_orig_image, val_annot, val_poss = sess.run([pred, orig_img_tensor, annotation_tensor, probabilities],
                                                                          feed_dict=feed_dict_to_use)
 
-                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_img.jpg'.format(gs)), np.squeeze(val_orig_image))
-                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_annotation.jpg'.format(gs)), grayscale_to_voc_impl(np.squeeze(val_annot)))
-                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_prediction.jpg'.format(gs)), grayscale_to_voc_impl(np.squeeze(val_pred)))
+                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_img.jpg'.format(gs)), cv2.cvtColor(np.squeeze(val_orig_image), cv2.COLOR_RGB2BGR))
+                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_annotation.jpg'.format(gs)),  cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(val_annot)), cv2.COLOR_RGB2BGR))
+                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_prediction.jpg'.format(gs)),  cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(val_pred)), cv2.COLOR_RGB2BGR))
 
                 crf_ed = perform_crf(val_orig_image, val_poss)
-                cv2.imwrite(os.path.join(FLAGS.output_dir, 'eval', 'val_{0}_prediction_crfed.jpg'.format(gs)), grayscale_to_voc_impl(np.squeeze(crf_ed)))
+                cv2.imwrite(os.path.join(FLAGS.output_dir, 'eval', 'val_{0}_prediction_crfed.jpg'.format(gs)), cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(crf_ed)), cv2.COLOR_RGB2BGR))
 
     coord.request_stop()
     coord.join(threads)
