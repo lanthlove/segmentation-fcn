@@ -96,6 +96,8 @@ python3 convert_fcn_dataset.py --data_dir=/path/to/VOCdevkit/VOC2012/ --output_d
 ### 预训练模型
 预训练模型使用tensorflow，modelzoo中的VGG16模型，请学员自行到modelzoo中查找并将该预训练模型放到tinymind上。
 
+网络有问题的学员，可以使用已经预先上传到tinymind的模型，数据集为**ai100/vgg16**.
+
 ### 模型
 模型代码以课程视频week9 FCN部分的代码进行了修改，主要是代码整理，添加了数据输入和结果输出的部分。
 
@@ -135,7 +137,6 @@ opencv-python
 
 数据集：
 - 数据集中应包含train和val两个tfrecord文件，大小在400MB左右
-- 数据集中应包含vgg_16.ckpt，大小在528MB
 
 在tinymind运行log的输出中，可以看到如下内容：
 ```sh
