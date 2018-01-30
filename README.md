@@ -114,6 +114,7 @@ https://www.tinymind.com/ai100/quiz-w9-fcn
 pydensecrf
 opencv-python
 ```
+>cv2即是opencv-python,本地运行的话，使用pip安装即可。这个不是一个官方版本，缺一些比较少用的功能，本作业用这个版本就足够了。官方版本需要编译，而且过程比较复杂，没有特殊必要，不要编译安装。
 
 模型参数的解释：
 
