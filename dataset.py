@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 import time
 
 import tensorflow as tf
+import os
 
 from utils import (_B_MEAN, _G_MEAN, _R_MEAN, _mean_image_subtraction)
 
@@ -33,6 +34,7 @@ def read_and_decode(filename_queue):
 
 
 def inputs(data_set, train=True, batch_size=1, num_epochs=1, upsample_factor_for_whole_net=32):
+    assert os.path.exists(data_set), '[{0}] not exist!!!'.format(data_set)
     if not num_epochs:
         num_epochs = None
 
