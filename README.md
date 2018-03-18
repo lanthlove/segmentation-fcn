@@ -134,7 +134,7 @@ opencv-python
 - 学员需要在作业提供的代码基础上添加8X的FCN实现并进行训练。
 
 
-> tinymind上有已经上传好的[数据集](https://www.tinymind.com/ai100/datasets/quiz-w9)，仅供测试和参考，作业中请自己处理数据集并上传，使用这个数据集的作业不予打分。
+> tinymind上有已经上传好的[数据集](https://www.tinymind.com/ai100/datasets/quiz-w9)，仅供测试和参考，作业中请自己处理数据集并上传，使用这个数据集的作业数据集部分不给分。
 
 ### 结果评估
 
