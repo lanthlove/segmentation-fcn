@@ -6,10 +6,10 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from vgg import vgg_16
-
+from object_detection.utils import dataset_util
 
 flags = tf.app.flags
-flags.DEFINE_string('data_dir', '', 'Root directory to raw pet dataset.')
+flags.DEFINE_string('data_dir', 'D:/Documents/AI/ThirdParty/models/research/data/VOCdevkit/VOC2012', 'Root directory to raw pet dataset.')
 flags.DEFINE_string('output_dir', '', 'Path to directory to output TFRecords.')
 
 FLAGS = flags.FLAGS
@@ -49,29 +49,38 @@ def dict_to_tf_example(data, label):
     height, width = img_label.shape[0], img_label.shape[1]
     if height < vgg_16.default_image_size or width < vgg_16.default_image_size:
         # 保证最后随机裁剪的尺寸
+        print('image(%s) size(height,width)=(%d,%d),vgg_default_size(%d)'%
+        (data.split('/')[-1].split('.')[0],
+        height,width,vgg_16.default_image_size))
         return None
 
     # Your code here, fill the dict
     feature_dict = {
-        'image/height': None,
-        'image/width': None,
-        'image/filename': None,
-        'image/encoded': None,
-        'image/label': None,
-        'image/format': None,
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(data.split('/')[-1].split('.')[0].encode('utf8')),
+        'image/encoded': dataset_util.bytes_feature(encoded_data),
+        'image/label':  dataset_util.bytes_feature(encoded_label),
+        'image/format': dataset_util.bytes_feature('jpeg'.encode('utf8')),
     }
     example = tf.train.Example(features=tf.train.Features(feature=feature_dict))
     return example
 
 
 def create_tf_record(output_filename, file_pars):
-    # Your code here
-    pass
-
+    writer = tf.python_io.TFRecordWriter(output_filename)
+    for f in file_pars:
+        #print(f[0])
+        #print(f[1])
+        tf_example = dict_to_tf_example(f[0],f[1])
+        if tf_example is not None:
+            writer.write(tf_example.SerializeToString())
+    writer.close()
 
 def read_images_names(root, train=True):
-    txt_fname = os.path.join(root, 'ImageSets/Segmentation/', 'train.txt' if train else 'val.txt')
-
+    #txt_fname = os.path.join(root, 'ImageSets','Segmentation', 'train.txt' if train else 'val.txt')
+    txt_fname = root + '/ImageSets/Segmentation/' + ('train.txt'  if train else 'val.txt')
+    
     with open(txt_fname, 'r') as f:
         images = f.read().split()
 

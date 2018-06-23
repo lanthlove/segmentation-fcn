@@ -1,0 +1,6 @@
+python train.py --checkpoint_path D:/Documents/AI/ThirdParty/models/research/data/pre_trained/vgg_16_2016_08_28/vgg_16.ckpt --output_dir ./output_16s --upsample_factor 16 --dataset_train ./fcn_train.record --dataset_val ./fcn_val.record --batch_size 16 --max_steps 2000 
+
+
+python train.py --checkpoint_path D:/Documents/AI/ThirdParty/models/research/data/pre_trained/vgg_16_2016_08_28/vgg_16.ckpt --output_dir ./output_8s --upsample_factor 8 --dataset_train ./fcn_train.record --dataset_val ./fcn_val.record --batch_size 12 --max_steps 3000
+
+python train.py --checkpoint_path D:/Documents/AI/ThirdParty/models/research/data/pre_trained/vgg_16_2016_08_28/vgg_16.ckpt --output_dir ./output_8sn --upsample_factor 8 --dataset_train ./fcn_train.record --dataset_val ./fcn_val.record --batch_size 12 --max_steps 3000
