@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# python3
 # -*- coding: utf-8 -*-
 import argparse
 import os
@@ -7,18 +7,14 @@ import time
 import cv2
 import numpy as np
 import tensorflow as tf
-
-import pydensecrf.densecrf as dcrf
-import vgg
 from dataset import inputs
-from pydensecrf.utils import (create_pairwise_bilateral,
-                              create_pairwise_gaussian, unary_from_softmax)
-from utils import (bilinear_upsample_weights, grayscale_to_voc_impl)
-
 import logging
+from utils import grayscale_to_voc_impl
+
+import fcn
+import perform_crf as crf
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s', level=logging.DEBUG)
-
 
 def parse_args(check=True):
     parser = argparse.ArgumentParser()
@@ -33,11 +29,9 @@ def parse_args(check=True):
     FLAGS, unparsed = parser.parse_known_args()
     return FLAGS, unparsed
 
-
 FLAGS, unparsed = parse_args()
 
 slim = tf.contrib.slim
-
 
 tf.reset_default_graph()
 is_training_placeholder = tf.placeholder(tf.bool)
@@ -62,104 +56,8 @@ vgg_checkpoint_path = FLAGS.checkpoint_path
 # Creates a variable to hold the global_step.
 global_step = tf.Variable(0, trainable=False, name='global_step', dtype=tf.int64)
 
-
-# Define the model that we want to use -- specify to use only two classes at the last layer
-with slim.arg_scope(vgg.vgg_arg_scope()):
-    logits, end_points = vgg.vgg_16(image_tensor,
-                                    num_classes=number_of_classes,
-                                    is_training=is_training_placeholder,
-                                    spatial_squeeze=False,
-                                    fc_conv_padding='SAME')
-
-downsampled_logits_shape = tf.shape(logits)
-
-img_shape = tf.shape(image_tensor)
-
-# Calculate the ouput size of the upsampled tensor
-# The shape should be batch_size X width X height X num_classes
-upsampled_logits_shape = tf.stack([
-                                  downsampled_logits_shape[0],
-                                  img_shape[1],
-                                  img_shape[2],
-                                  downsampled_logits_shape[3]
-                                  ])
-if upsample_factor == 16:
-    pool4_feature = end_points['vgg_16/pool4']
-    with tf.variable_scope('vgg_16/fc8'):
-        aux_logits_16s = slim.conv2d(pool4_feature, number_of_classes, [1, 1],
-                                    activation_fn=None,
-                                    weights_initializer=tf.zeros_initializer,
-                                    scope='conv_pool4')
-
-    # Perform the upsampling
-    upsample_filter_np_x2 = bilinear_upsample_weights(2,  # upsample_factor,
-                                                    number_of_classes)
-
-    upsample_filter_tensor_x2 = tf.Variable(upsample_filter_np_x2, name='vgg_16/fc8/t_conv_x2')
-
-    upsampled_logits = tf.nn.conv2d_transpose(logits, upsample_filter_tensor_x2,
-                                            output_shape=tf.shape(aux_logits_16s),
-                                            strides=[1, 2, 2, 1],
-                                            padding='SAME')
-
-
-    upsampled_logits = upsampled_logits + aux_logits_16s
-
-    upsample_filter_np_x16 = bilinear_upsample_weights(upsample_factor,
-                                                    number_of_classes)
-
-    upsample_filter_tensor_x16 = tf.Variable(upsample_filter_np_x16, name='vgg_16/fc8/t_conv_x16')
-    upsampled_logits = tf.nn.conv2d_transpose(upsampled_logits, upsample_filter_tensor_x16,
-                                            output_shape=upsampled_logits_shape,
-                                            strides=[1, upsample_factor, upsample_factor, 1],
-                                            padding='SAME')
-elif upsample_factor == 8:
-    pool3_feature = end_points['vgg_16/pool3']
-    with tf.variable_scope('vgg_16/fc8'):
-        aux_logits_8s = slim.conv2d(pool3_feature, number_of_classes, [1, 1],
-                                    activation_fn=None,
-                                    weights_initializer=tf.zeros_initializer,
-                                    scope='conv_pool3')
-
-    pool4_feature = end_points['vgg_16/pool4']
-    with tf.variable_scope('vgg_16/fc8'):
-        aux_logits_16s = slim.conv2d(pool4_feature, number_of_classes, [1, 1],
-                                    activation_fn=None,
-                                    weights_initializer=tf.zeros_initializer,
-                                    scope='conv_pool4')
-
-    # 对fc8结果做 upsampling，得到16s
-    upsample_filter_np_x2 = bilinear_upsample_weights(2,  # upsample_factor,
-                                                    number_of_classes)
-    upsample_filter_tensor_x2_1 = tf.Variable(upsample_filter_np_x2, name='vgg_16/fc8/t_conv_x2_1')
-    upsampled_logits = tf.nn.conv2d_transpose(logits, upsample_filter_tensor_x2_1,
-                                            output_shape=tf.shape(aux_logits_16s),
-                                            strides=[1, 2, 2, 1],
-                                            padding='SAME')
-    # 求和之后再做一次 upsampling，得到8s
-    upsampled_logits = upsampled_logits + aux_logits_16s
-    upsample_filter_tensor_x2_2 = tf.Variable(upsample_filter_np_x2, name='vgg_16/fc8/t_conv_x2_2')
-    upsampled_logits = tf.nn.conv2d_transpose(upsampled_logits, upsample_filter_tensor_x2_2,
-                                            output_shape=tf.shape(aux_logits_8s),
-                                            strides=[1, 2, 2, 1],
-                                            padding='SAME')
-
-    upsampled_logits = upsampled_logits + aux_logits_8s
-
-    upsample_filter_np_x8 = bilinear_upsample_weights(upsample_factor,
-                                                    number_of_classes)
-    upsample_filter_tensor_x8 = tf.Variable(upsample_filter_np_x8, name='vgg_16/fc8/t_conv_x8')
-    upsampled_logits = tf.nn.conv2d_transpose(upsampled_logits, upsample_filter_tensor_x8,
-                                            output_shape=upsampled_logits_shape,
-                                            strides=[1, upsample_factor, upsample_factor, 1],
-                                            padding='SAME')
-
-lbl_onehot = tf.one_hot(annotation_tensor, number_of_classes)
-cross_entropies = tf.nn.softmax_cross_entropy_with_logits(logits=upsampled_logits,
-                                                          labels=lbl_onehot)
-
-cross_entropy_loss = tf.reduce_mean(tf.reduce_sum(cross_entropies, axis=-1))
-
+# Creates logists and loss with fcn-net
+upsampled_logits,cross_entropy_loss = fcn.fcn(image_tensor,upsample_factor,number_of_classes,annotation_tensor)
 
 # Tensor to get the final prediction for each pixel -- pay
 # attention that we don't need softmax in this case because
@@ -264,46 +162,6 @@ init_local_op = tf.local_variables_initializer()
 
 saver = tf.train.Saver(max_to_keep=5)
 
-
-def perform_crf(image, probabilities):
-
-    image = image.squeeze()
-    softmax = probabilities.squeeze().transpose((2, 0, 1))
-
-    # The input should be the negative of the logarithm of probability values
-    # Look up the definition of the softmax_to_unary for more information
-    unary = unary_from_softmax(softmax)
-
-    # The inputs should be C-continious -- we are using Cython wrapper
-    unary = np.ascontiguousarray(unary)
-
-    d = dcrf.DenseCRF(image.shape[0] * image.shape[1], number_of_classes)
-
-    d.setUnaryEnergy(unary)
-
-    # This potential penalizes small pieces of segmentation that are
-    # spatially isolated -- enforces more spatially consistent segmentations
-    feats = create_pairwise_gaussian(sdims=(10, 10), shape=image.shape[:2])
-
-    d.addPairwiseEnergy(feats, compat=3,
-                        kernel=dcrf.DIAG_KERNEL,
-                        normalization=dcrf.NORMALIZE_SYMMETRIC)
-
-    # This creates the color-dependent features --
-    # because the segmentation that we get from CNN are too coarse
-    # and we can use local color features to refine them
-    feats = create_pairwise_bilateral(sdims=(50, 50), schan=(20, 20, 20),
-                                      img=image, chdim=2)
-
-    d.addPairwiseEnergy(feats, compat=10,
-                        kernel=dcrf.DIAG_KERNEL,
-                        normalization=dcrf.NORMALIZE_SYMMETRIC)
-    Q = d.inference(5)
-
-    res = np.argmax(Q, axis=0).reshape((image.shape[0], image.shape[1]))
-    return res
-
-
 with sess:
     # Run the initializers.
     sess.run(init_op)
@@ -337,7 +195,7 @@ with sess:
 
             summary_string_writer.add_summary(summary_string, i)
 
-            if gs % 100 == 0:
+            if gs % 200 == 0:
                 save_path = saver.save(sess, os.path.join(log_folder, "model.ckpt"), global_step=gs)
                 logging.debug("Model saved in file: %s" % save_path)
 
@@ -355,11 +213,11 @@ with sess:
                 cv2.imwrite(os.path.join(eval_folder, 'val_{0}_annotation.jpg'.format(gs)),  cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(val_annot)), cv2.COLOR_RGB2BGR))
                 cv2.imwrite(os.path.join(eval_folder, 'val_{0}_prediction.jpg'.format(gs)),  cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(val_pred)), cv2.COLOR_RGB2BGR))
 
-                crf_ed = perform_crf(val_orig_image, val_poss)
-                cv2.imwrite(os.path.join(FLAGS.output_dir, 'eval', 'val_{0}_prediction_crfed.jpg'.format(gs)), cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(crf_ed)), cv2.COLOR_RGB2BGR))
+                crf_ed = crf.perform_crf(val_orig_image, val_poss, number_of_classes)
+                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_prediction_crfed.jpg'.format(gs)), cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(crf_ed)), cv2.COLOR_RGB2BGR))
 
                 overlay = cv2.addWeighted(cv2.cvtColor(np.squeeze(val_orig_image), cv2.COLOR_RGB2BGR), 1, cv2.cvtColor(grayscale_to_voc_impl(np.squeeze(crf_ed)), cv2.COLOR_RGB2BGR), 0.8, 0)
-                cv2.imwrite(os.path.join(FLAGS.output_dir, 'eval', 'val_{0}_overlay.jpg'.format(gs)), overlay)
+                cv2.imwrite(os.path.join(eval_folder, 'val_{0}_overlay.jpg'.format(gs)), overlay)
 
     coord.request_stop()
     coord.join(threads)
