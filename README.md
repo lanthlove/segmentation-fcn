@@ -93,7 +93,7 @@ upsampled_logits = tf.nn.conv2d_transpose(upsampled_logits, upsample_filter_tens
 
 ## <span id="training">3.模型训练与验证<span>
 ### 3.1 training process
-[tran.py](./train.py)实现了模型的训练功能，基于原来的做了一些修改，将fcn和crf功能实现从原来的train.py中提取出来。  
+[tran.py](./train.py)实现了模型的训练功能，基于原来的做了一些修改，将fcn和crf功能实现从原来的train.py中分离出来。  
 **fcn-16s training**：
 ```cmd
 python train.py --checkpoint_path=./vgg_16.ckpt \
@@ -106,7 +106,7 @@ python train.py --checkpoint_path=./vgg_16.ckpt \
 ```
 
 **fcn-8s training**：  
-修改batch size为12，max_steps增加到5000
+修改batch size为12，max_steps增加到6000
 ```cmd
 python train.py --checkpoint_path=./vgg_16.ckpt \
 --output_dir=./output_8s \
@@ -114,11 +114,12 @@ python train.py --checkpoint_path=./vgg_16.ckpt \
 --dataset_train=./fcn_train.record \
 --dataset_val=./fcn_val.record \
 --batch_size=12 \
---max_steps=6500
+--max_steps=6000
 ```
 ### 3.2 evaluate process
 [evaluate.py](./evaluate.py)实现了验证功能，用于再validataion数据集上验证模型的结果，并计算出MIoU。
 [metrics.py](./metrics.py)实现了MIoU的计算，这部分实现来源于[deeplab-v3](https://github.com/sthalles/deeplab_v3)  
+变量save_samples是保存prediction和prediction_crf的jpg的样本数目  
 **fcn-16s evaluate**：
 ```cmd
 python evaluate.py --output_dir=./output_16s \
@@ -138,8 +139,6 @@ python evaluate.py --output_dir=./output_8s \
 ```
 Validation结果,**最终MIoU = 0.6098**：
 ![fcn-8s.jpg](./g3doc/8s_miou.jpg)
-
-
 
 ## <span id="conclusion">4.总结<span>
 ### 4.1 实现的fcn-8s比fcn-16s的MIoU要小，这个与论文中的结果不相符， 从evaluate生成的prediction的图片来看，fcn-8s生成的结果确实更精细。怀疑是MIoU的计算上有问题，但是未查到具体原因。  
